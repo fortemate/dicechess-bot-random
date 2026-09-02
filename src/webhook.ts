@@ -30,8 +30,11 @@ export function verifySignature(
 	const ts = Number(timestamp);
 	if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > MAX_SKEW_SECONDS) return false;
 	const expected = createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
-	if (expected.length !== signature.length) return false;
-	return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+	const expectedBuf = Buffer.from(expected);
+	const sigBuf = Buffer.from(signature);
+	const equalLength = expectedBuf.length === sigBuf.length;
+	const match = timingSafeEqual(expectedBuf, equalLength ? sigBuf : expectedBuf);
+	return equalLength && match;
 }
 
 export interface DeliveryResult {
@@ -80,7 +83,7 @@ export function contextFromEnvelope(envelope: { seat: 'White' | 'Black'; state?:
 }
 
 async function fetchLegalMoves(baseUrl: string, gameId: string): Promise<MoveTree> {
-	const res = await fetch(`${baseUrl}/games/${gameId}/moves`, { headers: { 'User-Agent': USER_AGENT } });
+	const res = await fetch(`${baseUrl}/games/${encodeURIComponent(gameId)}/moves`, { headers: { 'User-Agent': USER_AGENT } });
 	const data = (await res.json()) as { legalMoves?: MoveTree };
 	return data.legalMoves ?? {};
 }
