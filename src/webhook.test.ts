@@ -37,6 +37,23 @@ test('missing pieces fail', () => {
 	assert.equal(verifySignature(SECRET, 'not-a-number', 'x', 'y'), false);
 });
 
+test('signatures with mismatched lengths or invalid encoding fail safely without throwing', () => {
+	const ts = now();
+	const body = '{"hello":true}';
+
+	// Short signature
+	assert.equal(verifySignature(SECRET, ts, body, 'a1b2c3'), false);
+
+	// Long signature
+	assert.equal(verifySignature(SECRET, ts, body, 'a'.repeat(128)), false);
+
+	// Multi-byte UTF-8 character signature with length matching hex length
+	const multibyteSig = 'a'.repeat(63) + '😀';
+	assert.doesNotThrow(() => {
+		assert.equal(verifySignature(SECRET, ts, body, multibyteSig), false);
+	});
+});
+
 test('verification echoes the nonce', async () => {
 	const raw = JSON.stringify({ type: 'verification', nonce: 'abc123' });
 	const { status, body } = await handleDelivery({}, raw, SECRET);
