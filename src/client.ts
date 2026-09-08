@@ -146,24 +146,24 @@ export class BotClient {
 	}
 
 	async legalMoves(gameId: string): Promise<MoveTree> {
-		const data = await this.request('GET', `/games/${gameId}/moves`, undefined, false);
+		const data = await this.request('GET', `/games/${encodeURIComponent(gameId)}/moves`, undefined, false);
 		return ((data.legalMoves as MoveTree) ?? {}) as MoveTree;
 	}
 
 	snapshot(gameId: string): Promise<PublicGameState> {
-		return this.request('GET', `/games/${gameId}`, undefined, false) as Promise<PublicGameState>;
+		return this.request('GET', `/games/${encodeURIComponent(gameId)}`, undefined, false) as Promise<PublicGameState>;
 	}
 
 	async submitSeed(gameId: string, seed: string): Promise<void> {
-		await this.request('POST', `/bot/game/${gameId}/seed`, { seed });
+		await this.request('POST', `/bot/game/${encodeURIComponent(gameId)}/seed`, { seed });
 	}
 
 	submitMove(gameId: string, moves: string[]): Promise<MoveVerdict> {
-		return this.request('POST', `/bot/game/${gameId}/move`, { moves }) as Promise<MoveVerdict>;
+		return this.request('POST', `/bot/game/${encodeURIComponent(gameId)}/move`, { moves }) as Promise<MoveVerdict>;
 	}
 
 	async resign(gameId: string): Promise<void> {
-		await this.request('POST', `/bot/game/${gameId}/resign`);
+		await this.request('POST', `/bot/game/${encodeURIComponent(gameId)}/resign`);
 	}
 
 	/**
