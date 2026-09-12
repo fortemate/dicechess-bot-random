@@ -37,7 +37,8 @@
   "author": "Jegors Čemisovs",
   "license": "MIT",
   "dependencies": {
-    "@azure/functions": "^4.6.1"
+    "@azure/functions": "^4.6.1",
+    "@fortemate/dicechess-engine": "^0.10.0"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
