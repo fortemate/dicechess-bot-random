@@ -50,6 +50,21 @@ async function playTurn(client: BotClient, game: GameSummary, seeded: Set<string
 	}
 }
 
+async function pollStep(client: BotClient, oppTeam: string, oppName: string, seeded: Set<string>): Promise<void> {
+	try {
+		const games = await client.myGames();
+		if (games.length === 0) {
+			// Activity loop: no live game → offer another challenge and wait for it.
+			await client.challenge(oppTeam, oppName);
+		} else {
+			const pendingGames = games.filter((g) => g.dicePending && g.activeSeat === g.seat);
+			await Promise.all(pendingGames.map((game) => playTurn(client, game, seeded)));
+		}
+	} catch (e) {
+		console.warn(`loop error (continuing): ${(e as Error).message}`);
+	}
+}
+
 async function main(): Promise<void> {
 	const baseUrl = process.env.DICECHESS_BASE_URL ?? DEFAULT_BASE_URL;
 	const token = process.env.DICECHESS_TOKEN;
@@ -70,27 +85,18 @@ async function main(): Promise<void> {
 	const seeded = new Set<string>();
 	console.info(`bot ready — challenging ${opponent} and playing forever (Ctrl-C to stop)`);
 
-	for (;;) {
-		try {
-			const games = await client.myGames();
-			if (games.length === 0) {
-				// Activity loop: no live game → offer another challenge and wait for it.
-				await client.challenge(oppTeam, oppName);
-			} else {
-				for (const game of games) {
-					if (game.dicePending && game.activeSeat === game.seat) {
-						await playTurn(client, game, seeded);
-					}
-				}
-			}
-		} catch (e) {
-			console.warn(`loop error (continuing): ${(e as Error).message}`);
-		}
+	const pollForever = async (): Promise<never> => {
+		await pollStep(client, oppTeam, oppName, seeded);
 		await sleep(pollMs);
-	}
+		return pollForever();
+	};
+
+	await pollForever();
 }
 
-main().catch((e) => {
+try {
+	await main();
+} catch (e) {
 	console.error(e);
 	process.exit(1);
-});
+}
