@@ -62,9 +62,7 @@ export async function handleDelivery(
 		return { status: 401, body: { error: 'invalid signature' } };
 	}
 	let tree: MoveTree | null | undefined = envelope.state?.legalMoves;
-	if (tree === null || tree === undefined) {
-		tree = await fetchLegalMoves(baseUrl, envelope.gameId); // inline cap exceeded — public fetch
-	}
+	tree ??= await fetchLegalMoves(baseUrl, envelope.gameId); // inline cap exceeded — public fetch
 	return { status: 200, body: { moves: await chooseMove(contextFromEnvelope(envelope, tree ?? {})) } };
 }
 
