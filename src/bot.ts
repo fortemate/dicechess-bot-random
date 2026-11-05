@@ -98,10 +98,15 @@ async function main(): Promise<void> {
 	const seeded = new Set<string>();
 	console.info(`bot ready — challenging ${opponent} and playing forever (Ctrl-C to stop)`);
 
-	for (;;) {
-		await pollStep(client, oppTeam, oppName, seeded);
-		await sleep(pollMs);
-	}
+	const scheduleNext = () => {
+		setTimeout(() => {
+			void pollStep(client, oppTeam, oppName, seeded).finally(scheduleNext);
+		}, pollMs);
+	};
+
+	await pollStep(client, oppTeam, oppName, seeded);
+	scheduleNext();
+	await new Promise<never>(() => {});
 }
 
 try {
