@@ -50,6 +50,8 @@ async function playTurn(client: BotClient, game: GameSummary, seeded: Set<string
 	}
 }
 
+const inFlight = new Set<string>();
+
 async function pollStep(client: BotClient, oppTeam: string, oppName: string, seeded: Set<string>): Promise<void> {
 	try {
 		const games = await client.myGames();
@@ -57,8 +59,19 @@ async function pollStep(client: BotClient, oppTeam: string, oppName: string, see
 			// Activity loop: no live game → offer another challenge and wait for it.
 			await client.challenge(oppTeam, oppName);
 		} else {
-			const pendingGames = games.filter((g) => g.dicePending && g.activeSeat === g.seat);
-			await Promise.all(pendingGames.map((game) => playTurn(client, game, seeded)));
+			const pendingGames = games.filter(
+				(g) => g.dicePending && g.activeSeat === g.seat && !inFlight.has(g.gameId),
+			);
+			await Promise.all(
+				pendingGames.map(async (game) => {
+					inFlight.add(game.gameId);
+					try {
+						await playTurn(client, game, seeded);
+					} finally {
+						inFlight.delete(game.gameId);
+					}
+				}),
+			);
 		}
 	} catch (e) {
 		console.warn(`loop error (continuing): ${(e as Error).message}`);
@@ -85,13 +98,10 @@ async function main(): Promise<void> {
 	const seeded = new Set<string>();
 	console.info(`bot ready — challenging ${opponent} and playing forever (Ctrl-C to stop)`);
 
-	const pollForever = async (): Promise<never> => {
+	for (;;) {
 		await pollStep(client, oppTeam, oppName, seeded);
 		await sleep(pollMs);
-		return pollForever();
-	};
-
-	await pollForever();
+	}
 }
 
 try {
